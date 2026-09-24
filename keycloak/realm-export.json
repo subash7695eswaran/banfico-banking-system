@@ -1,0 +1,141 @@
+{
+  "id": "banfico-realm",
+  "realm": "banfico-realm",
+  "displayName": "Banfico Open Banking Realm",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Administrator with full system access"
+      },
+      {
+        "name": "maker",
+        "description": "Maker role for initiating transactions and account requests"
+      },
+      {
+        "name": "checker",
+        "description": "Checker role for approving or rejecting high-value operations"
+      },
+      {
+        "name": "customer",
+        "description": "Standard banking customer"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "banfico-banking-app",
+      "name": "Banfico Mini Banking Frontend / API",
+      "description": "Client for Banfico Banking Application",
+      "rootUrl": "http://localhost:5173",
+      "adminUrl": "http://localhost:5173",
+      "baseUrl": "/",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:3000/*",
+        "http://localhost:8080/*",
+        "https://oauth.pstmn.io/v1/callback"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "banfico-backend-api",
+      "name": "Banfico Spring Boot Resource Server",
+      "bearerOnly": true,
+      "enabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@banfico.com",
+      "firstName": "System",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ]
+    },
+    {
+      "username": "maker_user",
+      "enabled": true,
+      "email": "maker@banfico.com",
+      "firstName": "Alex",
+      "lastName": "Maker",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "maker123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "maker"
+      ]
+    },
+    {
+      "username": "checker_user",
+      "enabled": true,
+      "email": "checker@banfico.com",
+      "firstName": "Chris",
+      "lastName": "Checker",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "checker123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "checker"
+      ]
+    },
+    {
+      "username": "customer_user",
+      "enabled": true,
+      "email": "customer@banfico.com",
+      "firstName": "Subash",
+      "lastName": "Customer",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "customer"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,364 @@
+{
+  "info": {
+    "_postman_id": "banfico-banking-collection-v1",
+    "name": "Banfico Mini Banking & Open Banking Consent Management API",
+    "description": "Comprehensive Postman API collection for Banfico 5-6 Week Training Program.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Health & Metadata",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Application Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "info"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Customer Management",
+      "item": [
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Subash Murugan\",\n  \"email\": \"subash.m@banfico.com\",\n  \"phone\": \"+91 9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Get All Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/1/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "1", "accounts"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Bank Accounts",
+      "item": [
+        {
+          "name": "Open Bank Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"accountType\": \"SAVINGS\",\n  \"initialDeposit\": 5000.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts"]
+            }
+          }
+        },
+        {
+          "name": "Get All Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts"]
+            }
+          }
+        },
+        {
+          "name": "Get Account by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Transactions",
+      "item": [
+        {
+          "name": "Execute Deposit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionType\": \"DEPOSIT\",\n  \"amount\": 1500.00,\n  \"description\": \"Salary deposit credit\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/1/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "1", "transactions"]
+            }
+          }
+        },
+        {
+          "name": "Execute Withdrawal",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionType\": \"WITHDRAWAL\",\n  \"amount\": 200.00,\n  \"description\": \"ATM Cash Out\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/1/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "1", "transactions"]
+            }
+          }
+        },
+        {
+          "name": "Execute Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionType\": \"TRANSFER\",\n  \"amount\": 350.00,\n  \"destinationAccountId\": 2,\n  \"description\": \"Rent payment transfer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/1/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "1", "transactions"]
+            }
+          }
+        },
+        {
+          "name": "Get Account Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/1/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "1", "transactions"]
+            }
+          }
+        },
+        {
+          "name": "Get All System Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Beneficiaries",
+      "item": [
+        {
+          "name": "Add Beneficiary",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"beneficiaryName\": \"Alice Johnson\",\n  \"accountNumber\": \"GB29BNFC10000000000003\",\n  \"bankName\": \"Banfico Bank\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beneficiaries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beneficiaries"]
+            }
+          }
+        },
+        {
+          "name": "Get All Beneficiaries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/beneficiaries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beneficiaries"]
+            }
+          }
+        },
+        {
+          "name": "Delete Beneficiary",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/beneficiaries/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beneficiaries", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Open Banking Consents",
+      "item": [
+        {
+          "name": "Create Consent Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"bankAccountId\": 1,\n  \"purpose\": \"Account Information Service (AIS) - Balance & Transactions\",\n  \"tppClientId\": \"plaid-aggregator-tpp\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/consents",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "consents"]
+            }
+          }
+        },
+        {
+          "name": "Get All Consents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/consents",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "consents"]
+            }
+          }
+        },
+        {
+          "name": "Approve / Authorise Consent",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/consents/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "consents", "1", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Consent",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/consents/1/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "consents", "1", "reject"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Keycloak Auth (Week 4)",
+      "item": [
+        {
+          "name": "Get Access Token (Direct Access Grants)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "banfico-banking-app", "type": "text" },
+                { "key": "username", "value": "admin", "type": "text" },
+                { "key": "password", "value": "admin123", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8081/realms/banfico-realm/protocol/openid-connect/token",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8081",
+              "path": ["realms", "banfico-realm", "protocol", "openid-connect", "token"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
