@@ -45,6 +45,10 @@ public class DtoMapper {
                 .amount(transaction.getAmount())
                 .status(transaction.getStatus())
                 .description(transaction.getDescription())
+                .currency(transaction.getCurrency() != null ? transaction.getCurrency() : "INR")
+                .initiatedBy(transaction.getInitiatedBy())
+                .approvedBy(transaction.getApprovedBy())
+                .rejectionReason(transaction.getRejectionReason())
                 .sourceAccountId(transaction.getSourceAccount() != null ? transaction.getSourceAccount().getId() : null)
                 .sourceAccountNumber(transaction.getSourceAccount() != null ? transaction.getSourceAccount().getAccountNumber() : null)
                 .destinationAccountId(transaction.getDestinationAccount() != null ? transaction.getDestinationAccount().getId() : null)
@@ -78,10 +82,27 @@ public class DtoMapper {
                 .accountNumber(consent.getBankAccount() != null ? consent.getBankAccount().getAccountNumber() : null)
                 .status(consent.getStatus())
                 .purpose(consent.getPurpose())
+                .scopes(consent.getScopes())
                 .tppClientId(consent.getTppClientId())
                 .validUntil(consent.getValidUntil())
+                .revokedAt(consent.getRevokedAt())
+                .revocationReason(consent.getRevocationReason())
                 .createdAt(consent.getCreatedAt())
                 .updatedAt(consent.getUpdatedAt())
+                .build();
+    }
+
+    public ConsentAuditLogResponse toConsentAuditLogResponse(ConsentAuditLog log) {
+        if (log == null) return null;
+        return ConsentAuditLogResponse.builder()
+                .id(log.getId())
+                .consentReference(log.getConsentReference())
+                .customerId(log.getCustomerId())
+                .action(log.getAction())
+                .actorRole(log.getActorRole())
+                .actorIdentifier(log.getActorIdentifier())
+                .details(log.getDetails())
+                .createdAt(log.getCreatedAt())
                 .build();
     }
 }

@@ -82,7 +82,7 @@ export default function Accounts() {
                 <th>IBAN / Account Number</th>
                 <th>Customer Name</th>
                 <th>Account Type</th>
-                <th>Balance (£)</th>
+                <th>Balance (₹)</th>
                 <th>Status</th>
                 <th>Created Date</th>
               </tr>
@@ -114,11 +114,11 @@ export default function Accounts() {
                       </span>
                     </td>
                     <td style={{ fontWeight: 800, fontSize: '1rem', color: '#ffffff' }}>
-                      £{Number(a.balance).toFixed(2)}
+                      ₹{Number(a.balance).toFixed(2)}
                     </td>
                     <td><StatusBadge status={a.status} /></td>
                     <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(a.createdAt).toLocaleDateString('en-GB')}
+                      {new Date(a.createdAt).toLocaleDateString('en-IN')}
                     </td>
                   </tr>
                 ))
@@ -161,13 +161,13 @@ export default function Accounts() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Initial Deposit (£)</label>
+            <label className="form-label">Initial Deposit (₹)</label>
             <input 
               type="number" 
               step="0.01" 
               min="0" 
               className="form-control" 
-              placeholder="1000.00" 
+              placeholder="10000.00" 
               required
               value={formData.initialDeposit}
               onChange={(e) => setFormData({ ...formData, initialDeposit: e.target.value })}

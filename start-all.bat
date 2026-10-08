@@ -3,8 +3,8 @@ echo ========================================================
 echo Starting Banfico Banking Full System...
 echo ========================================================
 
-start "Banfico Backend" cmd /k "cd backend && mvn spring-boot:run"
-start "Banfico Frontend" cmd /k "cd frontend && npm run dev"
+start "Banfico Backend" cmd /k "call start-backend.bat"
+start "Banfico Frontend" cmd /k "call start-frontend.bat"
 
 echo Backend and Frontend launched in separate windows!
 echo - Frontend: http://localhost:5173

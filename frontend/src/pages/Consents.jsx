@@ -1,20 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Plus, CheckCircle, XCircle, ShieldAlert, Key, Building } from 'lucide-react';
+import { ShieldCheck, Plus, CheckCircle, XCircle, Ban, History, ShieldAlert, Key, Building, Eye } from 'lucide-react';
 import { ConsentApi, CustomerApi, AccountApi } from '../api/axiosClient';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 
-export default function Consents() {
+export default function Consents({ currentRole }) {
   const [consents, setConsents] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  
+  const [selectedConsent, setSelectedConsent] = useState(null);
+  const [revocationReason, setRevocationReason] = useState('Customer no longer requires TPP data sharing');
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [formData, setFormData] = useState({
     customerId: '',
     bankAccountId: '',
-    purpose: 'Account Information Service (AIS) - Balance & Transactions',
+    purpose: 'Account Information Service (AIS) - Read Balances & Transactions',
+    scopes: 'READ_ACCOUNTS,READ_BALANCES,READ_TRANSACTIONS',
     tppClientId: 'fintech-aggregator-tpp'
   });
   const [error, setError] = useState(null);
@@ -57,10 +66,11 @@ export default function Consents() {
         customerId: Number(formData.customerId),
         bankAccountId: formData.bankAccountId ? Number(formData.bankAccountId) : null,
         purpose: formData.purpose,
+        scopes: formData.scopes,
         tppClientId: formData.tppClientId
       });
-      setSuccessMsg('Open Banking Consent request generated!');
-      setIsModalOpen(false);
+      setSuccessMsg('Open Banking Consent request generated successfully!');
+      setIsCreateModalOpen(false);
       loadData();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
@@ -92,20 +102,59 @@ export default function Consents() {
     }
   };
 
-  const filteredConsents = filterStatus === 'ALL' 
-    ? consents 
-    : consents.filter(c => c.status === filterStatus);
+  const openRevokeModal = (consent) => {
+    setSelectedConsent(consent);
+    setRevocationReason('Customer revoked third-party access permissions');
+    setIsRevokeModalOpen(true);
+  };
+
+  const handleRevokeConfirm = async (e) => {
+    e.preventDefault();
+    if (!selectedConsent) return;
+    try {
+      setError(null);
+      await ConsentApi.revoke(selectedConsent.id, {
+        reason: revocationReason,
+        revokedBy: 'Customer / Data Owner'
+      });
+      setSuccessMsg(`Consent ${selectedConsent.consentReference} REVOKED. Data access immediately blocked.`);
+      setIsRevokeModalOpen(false);
+      loadData();
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err) {
+      setError(err.message || 'Failed to revoke consent');
+    }
+  };
+
+  const openAuditModal = async (consent) => {
+    setSelectedConsent(consent);
+    setIsAuditModalOpen(true);
+    try {
+      setLoadingAudit(true);
+      const res = await ConsentApi.getByReferenceAudit(consent.consentReference);
+      setAuditLogs(res.data || []);
+    } catch (err) {
+      console.error('Failed to load audit history', err);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  const filteredConsents = consents.filter(c => {
+    if (filterStatus === 'ALL') return true;
+    return c.status === filterStatus;
+  });
 
   return (
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Open Banking Consent Management</h1>
+          <h1 className="page-title">Open Banking Consent Lifecycle</h1>
           <p className="page-description">
-            Regulated UK/Berlin Group Open Banking standard lifecycle (AIS & PIS authorization requests).
+            Regulated AIS & PIS consent state machine: PENDING → AUTHORISED / REJECTED → REVOKED / EXPIRED.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+        <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)}>
           <Plus size={16} /> New Consent Request
         </button>
       </div>
@@ -118,15 +167,15 @@ export default function Consents() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <ShieldCheck size={24} style={{ color: 'var(--accent-cyan)' }} />
           <div style={{ fontSize: '0.85rem' }}>
-            <span style={{ fontWeight: 700, color: '#ffffff' }}>Open Banking Lifecycle: </span>
-            A regulated Third Party Provider (TPP) requests access to customer financial data. The customer or bank checker must explicitly <strong>AUTHORISE</strong> or <strong>REJECT</strong> the consent.
+            <span style={{ fontWeight: 700, color: '#ffffff' }}>Consent Security Rules: </span>
+            A customer can <strong>Authorise</strong> or <strong>Reject</strong> a pending consent. Once authorised, the customer retains the statutory right to <strong>Revoke</strong> consent at any time, immediately preventing data access.
           </div>
         </div>
       </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        {['ALL', 'PENDING', 'AUTHORISED', 'REJECTED'].map((st) => (
+        {['ALL', 'PENDING', 'AUTHORISED', 'REJECTED', 'REVOKED', 'EXPIRED'].map((st) => (
           <button
             key={st}
             onClick={() => setFilterStatus(st)}
@@ -143,8 +192,8 @@ export default function Consents() {
             <thead>
               <tr>
                 <th>Consent Reference</th>
-                <th>Customer</th>
-                <th>Linked IBAN</th>
+                <th>Customer (Grantor)</th>
+                <th>Authorized Scopes</th>
                 <th>TPP Client (FinTech)</th>
                 <th>Purpose</th>
                 <th>Status</th>
@@ -165,8 +214,14 @@ export default function Consents() {
                       {c.consentReference}
                     </td>
                     <td style={{ fontWeight: 600 }}>{c.customerName || `Customer #${c.customerId}`}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {c.accountNumber || 'All Accounts'}
+                    <td>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {(c.scopes || 'READ_ACCOUNTS').split(',').map((sc) => (
+                          <span key={sc} style={{ fontSize: '0.65rem', padding: '2px 5px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-100)', borderRadius: '3px', fontWeight: 600 }}>
+                            {sc}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td>
                       <span style={{ 
@@ -183,26 +238,45 @@ export default function Consents() {
                     <td style={{ fontSize: '0.85rem' }}>{c.purpose}</td>
                     <td><StatusBadge status={c.status} /></td>
                     <td>
-                      {c.status === 'PENDING' ? (
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {c.status === 'PENDING' && (
+                          <>
+                            <button 
+                              onClick={() => handleApprove(c.id)}
+                              className="btn btn-success btn-sm"
+                              title="Approve TPP Access"
+                            >
+                              <CheckCircle size={14} /> Authorise
+                            </button>
+                            <button 
+                              onClick={() => handleReject(c.id)}
+                              className="btn btn-danger btn-sm"
+                              title="Reject TPP Request"
+                            >
+                              <XCircle size={14} /> Reject
+                            </button>
+                          </>
+                        )}
+
+                        {c.status === 'AUTHORISED' && (
                           <button 
-                            onClick={() => handleApprove(c.id)}
-                            className="btn btn-success btn-sm"
-                            title="Approve TPP Access"
-                          >
-                            <CheckCircle size={14} /> Authorise
-                          </button>
-                          <button 
-                            onClick={() => handleReject(c.id)}
+                            onClick={() => openRevokeModal(c)}
                             className="btn btn-danger btn-sm"
-                            title="Reject TPP Request"
+                            title="Revoke active consent"
                           >
-                            <XCircle size={14} /> Reject
+                            <Ban size={14} /> Revoke
                           </button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Settled</span>
-                      )}
+                        )}
+
+                        <button
+                          onClick={() => openAuditModal(c)}
+                          className="btn btn-secondary btn-sm"
+                          title="View consent audit trail"
+                          style={{ padding: '6px 8px' }}
+                        >
+                          <History size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -212,8 +286,8 @@ export default function Consents() {
         </div>
       </div>
 
-      {/* Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Initiate Open Banking Consent Request">
+      {/* Modal 1: Create Consent Request */}
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Initiate Open Banking Consent Request">
         <form onSubmit={handleCreateConsent}>
           <div className="form-group">
             <label className="form-label">Customer (Grantor)</label>
@@ -279,7 +353,7 @@ export default function Consents() {
           </div>
 
           <div className="modal-footer" style={{ padding: '16px 0 0 0', borderTop: '1px solid var(--border-color)' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
@@ -287,6 +361,83 @@ export default function Consents() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal 2: Revoke Consent Dialog */}
+      <Modal isOpen={isRevokeModalOpen} onClose={() => setIsRevokeModalOpen(false)} title="Revoke Open Banking Consent">
+        <form onSubmit={handleRevokeConfirm}>
+          <div style={{ marginBottom: '16px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            Are you sure you want to revoke consent <strong style={{ color: 'var(--accent-cyan)' }}>{selectedConsent?.consentReference}</strong> granted to <strong style={{ color: '#ffffff' }}>{selectedConsent?.tppClientId}</strong>?
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Reason for Revocation</label>
+            <input 
+              type="text" 
+              className="form-control" 
+              required
+              value={revocationReason}
+              onChange={(e) => setRevocationReason(e.target.value)}
+              placeholder="e.g. Switched provider, security concern, or no longer needed"
+            />
+          </div>
+
+          <div className="modal-footer" style={{ padding: '16px 0 0 0', borderTop: '1px solid var(--border-color)' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsRevokeModalOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-danger">
+              Confirm Immediate Revocation
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal 3: View Consent Audit Trail */}
+      <Modal isOpen={isAuditModalOpen} onClose={() => setIsAuditModalOpen(false)} title={`Audit Trail: ${selectedConsent?.consentReference || ''}`}>
+        <div>
+          {loadingAudit ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading audit history...</div>
+          ) : auditLogs.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No audit logs recorded for this consent reference.</div>
+          ) : (
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                    <th>Actor Role</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {new Date(log.createdAt).toLocaleString('en-IN')}
+                      </td>
+                      <td>
+                        <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                        {log.actorRole} ({log.actorIdentifier})
+                      </td>
+                      <td style={{ fontSize: '0.8rem' }}>{log.details}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="modal-footer" style={{ padding: '16px 0 0 0', borderTop: '1px solid var(--border-color)', marginTop: '16px' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsAuditModalOpen(false)}>
+              Close
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

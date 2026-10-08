@@ -38,6 +38,9 @@ public class Customer {
     @Column(nullable = false, length = 20)
     private String phone;
 
+    @Column(name = "keycloak_user_id", unique = true, length = 100)
+    private String keycloakUserId;
+
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     @Builder.Default

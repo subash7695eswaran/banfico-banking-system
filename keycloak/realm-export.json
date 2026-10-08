@@ -13,19 +13,31 @@
     "realm": [
       {
         "name": "admin",
-        "description": "Administrator with full system access"
-      },
-      {
-        "name": "maker",
-        "description": "Maker role for initiating transactions and account requests"
-      },
-      {
-        "name": "checker",
-        "description": "Checker role for approving or rejecting high-value operations"
+        "description": "Administrator with system-wide configuration and audit access (does not bypass consent)"
       },
       {
         "name": "customer",
-        "description": "Standard banking customer"
+        "description": "Customer / Data Owner: Views own accounts, approves, rejects, and revokes data sharing consents"
+      },
+      {
+        "name": "consent_requester",
+        "description": "Consent Requester / Data Consumer (TPP FinTech): Requests consent and queries authorized banking data"
+      },
+      {
+        "name": "bank_provider",
+        "description": "Bank / Data Provider: Maintains accounts and delivers data strictly validated against active consents"
+      },
+      {
+        "name": "consent_manager",
+        "description": "Consent Manager: Oversees full consent lifecycle state machine, validation rules, and audit logging"
+      },
+      {
+        "name": "maker",
+        "description": "Banking Operations Maker: Initiates banking transactions, transfers, and account operations"
+      },
+      {
+        "name": "checker",
+        "description": "Banking Operations Checker: Reviews and authorises high-value or sensitive operations initiated by Maker"
       }
     ]
   },
@@ -87,11 +99,79 @@
       ]
     },
     {
+      "username": "customer_user",
+      "enabled": true,
+      "email": "customer@banfico.com",
+      "firstName": "Subash",
+      "lastName": "Murugan (Customer)",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "customer"
+      ]
+    },
+    {
+      "username": "requester_tpp",
+      "enabled": true,
+      "email": "tpp@fintech-app.com",
+      "firstName": "Fintech",
+      "lastName": "Data Consumer (TPP)",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "tpp123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "consent_requester"
+      ]
+    },
+    {
+      "username": "bank_provider",
+      "enabled": true,
+      "email": "dataprovider@banfico.com",
+      "firstName": "Bank",
+      "lastName": "Data Provider Core",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "bank123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "bank_provider"
+      ]
+    },
+    {
+      "username": "consent_manager_user",
+      "enabled": true,
+      "email": "consentmanager@banfico.com",
+      "firstName": "Sarah",
+      "lastName": "Consent Officer",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "consent123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "consent_manager"
+      ]
+    },
+    {
       "username": "maker_user",
       "enabled": true,
       "email": "maker@banfico.com",
       "firstName": "Alex",
-      "lastName": "Maker",
+      "lastName": "Maker (Initiator)",
       "credentials": [
         {
           "type": "password",
@@ -108,7 +188,7 @@
       "enabled": true,
       "email": "checker@banfico.com",
       "firstName": "Chris",
-      "lastName": "Checker",
+      "lastName": "Checker (Approver)",
       "credentials": [
         {
           "type": "password",
@@ -118,23 +198,6 @@
       ],
       "realmRoles": [
         "checker"
-      ]
-    },
-    {
-      "username": "customer_user",
-      "enabled": true,
-      "email": "customer@banfico.com",
-      "firstName": "Subash",
-      "lastName": "Customer",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "customer123",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "customer"
       ]
     }
   ]

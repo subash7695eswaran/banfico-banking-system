@@ -45,12 +45,22 @@ public class Consent {
     @Column(nullable = false, length = 255)
     private String purpose;
 
+    @Column(nullable = false, length = 255)
+    @Builder.Default
+    private String scopes = "READ_ACCOUNTS,READ_BALANCES,READ_TRANSACTIONS";
+
     @Column(name = "tpp_client_id", length = 100)
     @Builder.Default
     private String tppClientId = "tpp-fintech-app";
 
     @Column(name = "valid_until")
     private LocalDateTime validUntil;
+
+    @Column(name = "revoked_at")
+    private LocalDateTime revokedAt;
+
+    @Column(name = "revocation_reason", length = 255)
+    private String revocationReason;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

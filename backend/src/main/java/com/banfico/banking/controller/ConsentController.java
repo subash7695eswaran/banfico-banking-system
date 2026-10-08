@@ -72,6 +72,15 @@ public class ConsentController {
         return ResponseEntity.ok(ApiResponse.ok("Consent marked as REJECTED", consent));
     }
 
+    @PostMapping("/{id}/revoke")
+    @Operation(summary = "Revoke Consent", description = "Customer revokes an already AUTHORISED consent with a specific reason.")
+    public ResponseEntity<ApiResponse<ConsentResponse>> revokeConsent(
+            @PathVariable Long id,
+            @RequestBody(required = false) com.banfico.banking.dto.request.RevokeConsentRequest request) {
+        ConsentResponse consent = consentService.revokeConsent(id, request);
+        return ResponseEntity.ok(ApiResponse.ok("Consent successfully REVOKED", consent));
+    }
+
     @PutMapping("/{id}/status")
     @Operation(summary = "Update Consent Status", description = "Directly update consent state (AUTHORISED, REJECTED, REVOKED, EXPIRED).")
     public ResponseEntity<ApiResponse<ConsentResponse>> updateConsentStatus(
@@ -79,5 +88,20 @@ public class ConsentController {
             @Valid @RequestBody UpdateConsentStatusRequest request) {
         ConsentResponse consent = consentService.updateConsentStatus(id, request);
         return ResponseEntity.ok(ApiResponse.ok("Consent status updated", consent));
+    }
+
+    @GetMapping("/audit")
+    @Operation(summary = "Get All Consent Audit Logs", description = "Consent Manager & Admin audit trail of all consent lifecycle transitions.")
+    public ResponseEntity<ApiResponse<List<com.banfico.banking.dto.response.ConsentAuditLogResponse>>> getAllAuditLogs() {
+        List<com.banfico.banking.dto.response.ConsentAuditLogResponse> logs = consentService.getAllAuditLogs();
+        return ResponseEntity.ok(ApiResponse.ok("All consent audit logs retrieved", logs));
+    }
+
+    @GetMapping("/{reference}/audit")
+    @Operation(summary = "Get Audit Logs for a Consent", description = "Retrieve lifecycle history for a specific consent reference.")
+    public ResponseEntity<ApiResponse<List<com.banfico.banking.dto.response.ConsentAuditLogResponse>>> getAuditLogsByReference(
+            @PathVariable String reference) {
+        List<com.banfico.banking.dto.response.ConsentAuditLogResponse> logs = consentService.getConsentAuditLogs(reference);
+        return ResponseEntity.ok(ApiResponse.ok("Consent audit logs retrieved", logs));
     }
 }

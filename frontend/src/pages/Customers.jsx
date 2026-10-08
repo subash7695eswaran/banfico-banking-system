@@ -97,7 +97,7 @@ export default function Customers() {
                       <span className="badge badge-active">{c.accountCount || 0} Accounts</span>
                     </td>
                     <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(c.createdAt).toLocaleDateString('en-GB')}
+                      {new Date(c.createdAt).toLocaleDateString('en-IN')}
                     </td>
                   </tr>
                 ))

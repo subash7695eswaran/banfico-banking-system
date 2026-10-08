@@ -37,13 +37,17 @@ CREATE TABLE IF NOT EXISTS transactions (
     transaction_reference VARCHAR(64) NOT NULL UNIQUE,
     transaction_type VARCHAR(20) NOT NULL,
     amount NUMERIC(15, 2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'INR',
     status VARCHAR(20) NOT NULL DEFAULT 'COMPLETED',
     description VARCHAR(255),
+    initiated_by VARCHAR(100),
+    approved_by VARCHAR(100),
+    rejection_reason VARCHAR(255),
     source_account_id BIGINT REFERENCES bank_accounts(id),
     destination_account_id BIGINT REFERENCES bank_accounts(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT chk_tx_type CHECK (transaction_type IN ('DEPOSIT', 'WITHDRAWAL', 'TRANSFER')),
-    CONSTRAINT chk_tx_status CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED', 'REJECTED')),
+    CONSTRAINT chk_tx_status CHECK (status IN ('PENDING', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED', 'REJECTED')),
     CONSTRAINT chk_positive_amount CHECK (amount > 0)
 );
 
@@ -65,11 +69,26 @@ CREATE TABLE IF NOT EXISTS consents (
     bank_account_id BIGINT REFERENCES bank_accounts(id) ON DELETE SET NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     purpose VARCHAR(255) NOT NULL,
+    scopes VARCHAR(255) NOT NULL DEFAULT 'READ_ACCOUNTS,READ_BALANCES,READ_TRANSACTIONS',
     tpp_client_id VARCHAR(100) NOT NULL DEFAULT 'tpp-fintech-app',
     valid_until TIMESTAMP WITH TIME ZONE,
+    revoked_at TIMESTAMP WITH TIME ZONE,
+    revocation_reason VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT chk_consent_status CHECK (status IN ('PENDING', 'AUTHORISED', 'REJECTED', 'REVOKED', 'EXPIRED'))
+);
+
+-- 7. Create Consent Audit Logs Table (Full Consent Lifecycle Tracking)
+CREATE TABLE IF NOT EXISTS consent_audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    consent_reference VARCHAR(64) NOT NULL,
+    customer_id BIGINT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    actor_role VARCHAR(50) NOT NULL,
+    actor_identifier VARCHAR(100) NOT NULL,
+    details TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- Indexes for optimal lookup performance
@@ -80,6 +99,8 @@ CREATE INDEX IF NOT EXISTS idx_tx_created ON transactions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_beneficiaries_customer ON beneficiaries(customer_id);
 CREATE INDEX IF NOT EXISTS idx_consents_customer ON consents(customer_id);
 CREATE INDEX IF NOT EXISTS idx_consents_status ON consents(status);
+CREATE INDEX IF NOT EXISTS idx_consent_audit_ref ON consent_audit_logs(consent_reference);
+CREATE INDEX IF NOT EXISTS idx_consent_audit_cust ON consent_audit_logs(customer_id);
 
 -- =====================================================================
 -- Seed Initial Demo Data (for testing & evaluations)
@@ -88,38 +109,47 @@ CREATE INDEX IF NOT EXISTS idx_consents_status ON consents(status);
 INSERT INTO customers (id, name, email, phone, created_at, updated_at)
 VALUES 
 (1, 'Subash Murugan', 'subash@banfico.com', '+91 9876543210', NOW(), NOW()),
-(2, 'Alice Johnson', 'alice.j@example.com', '+44 7700900077', NOW(), NOW()),
-(3, 'Bob Smith', 'bob.smith@example.com', '+44 7700900088', NOW(), NOW())
+(2, 'Alice Johnson', 'alice.j@example.com', '+91 9876543211', NOW(), NOW()),
+(3, 'Bob Smith', 'bob.smith@example.com', '+91 9876543212', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO bank_accounts (id, account_number, account_type, balance, status, customer_id, created_at, updated_at)
 VALUES 
-(1, 'GB29BNFC10000000000001', 'SAVINGS', 25000.00, 'ACTIVE', 1, NOW(), NOW()),
-(2, 'GB29BNFC10000000000002', 'CURRENT', 14250.50, 'ACTIVE', 1, NOW(), NOW()),
-(3, 'GB29BNFC10000000000003', 'SAVINGS', 8900.00, 'ACTIVE', 2, NOW(), NOW()),
-(4, 'GB29BNFC10000000000004', 'CURRENT', 3500.75, 'ACTIVE', 3, NOW(), NOW())
+(1, 'IN29BNFC10000000000001', 'SAVINGS', 250000.00, 'ACTIVE', 1, NOW(), NOW()),
+(2, 'IN29BNFC10000000000002', 'CURRENT', 142500.50, 'ACTIVE', 1, NOW(), NOW()),
+(3, 'IN29BNFC10000000000003', 'SAVINGS', 89000.00, 'ACTIVE', 2, NOW(), NOW()),
+(4, 'IN29BNFC10000000000004', 'CURRENT', 35000.75, 'ACTIVE', 3, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO beneficiaries (id, beneficiary_name, account_number, bank_name, customer_id, created_at)
 VALUES 
-(1, 'Alice Johnson', 'GB29BNFC10000000000003', 'Banfico Bank', 1, NOW()),
-(2, 'Tech Retailer UK', 'GB12BARC20202020202020', 'Barclays Bank', 1, NOW()),
-(3, 'Utility Services', 'GB99HSBC40404040404040', 'HSBC UK', 2, NOW())
+(1, 'Alice Johnson', 'IN29BNFC10000000000003', 'Banfico Bank', 1, NOW()),
+(2, 'Tech Retailer India', 'IN12HDFC20202020202020', 'HDFC Bank', 1, NOW()),
+(3, 'Utility Services', 'IN99ICIC40404040404040', 'ICICI Bank', 2, NOW())
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO transactions (id, transaction_reference, transaction_type, amount, status, description, source_account_id, destination_account_id, created_at)
+INSERT INTO transactions (id, transaction_reference, transaction_type, amount, currency, status, description, initiated_by, approved_by, source_account_id, destination_account_id, created_at)
 VALUES 
-(1, 'TXN-20260901-0001', 'DEPOSIT', 25000.00, 'COMPLETED', 'Initial opening balance', NULL, 1, NOW() - INTERVAL '15 days'),
-(2, 'TXN-20260905-0002', 'TRANSFER', 500.00, 'COMPLETED', 'Transfer to Alice', 1, 3, NOW() - INTERVAL '10 days'),
-(3, 'TXN-20260910-0003', 'DEPOSIT', 15000.00, 'COMPLETED', 'Salary credited', NULL, 2, NOW() - INTERVAL '5 days'),
-(4, 'TXN-20260912-0004', 'WITHDRAWAL', 749.50, 'COMPLETED', 'ATM Cash Withdrawal', 2, NULL, NOW() - INTERVAL '3 days')
+(1, 'TXN-20260901-0001', 'DEPOSIT', 250000.00, 'INR', 'COMPLETED', 'Initial opening balance', 'system', NULL, NULL, 1, NOW() - INTERVAL '15 days'),
+(2, 'TXN-20260905-0002', 'TRANSFER', 5000.00, 'INR', 'COMPLETED', 'Transfer to Alice', 'subash@banfico.com', NULL, 1, 3, NOW() - INTERVAL '10 days'),
+(3, 'TXN-20260910-0003', 'DEPOSIT', 150000.00, 'INR', 'COMPLETED', 'Salary credited', 'system', NULL, NULL, 2, NOW() - INTERVAL '5 days'),
+(4, 'TXN-20260912-0004', 'WITHDRAWAL', 7500.00, 'INR', 'COMPLETED', 'ATM Cash Withdrawal', 'subash@banfico.com', NULL, 2, NULL, NOW() - INTERVAL '3 days')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO consents (id, consent_reference, customer_id, bank_account_id, status, purpose, tpp_client_id, valid_until, created_at, updated_at)
+INSERT INTO consents (id, consent_reference, customer_id, bank_account_id, status, purpose, scopes, tpp_client_id, valid_until, created_at, updated_at)
 VALUES 
-(1, 'CONSENT-20260915-001', 1, 1, 'AUTHORISED', 'Account Information Service - Aggregator App', 'fintech-aggregator-tpp', NOW() + INTERVAL '90 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
-(2, 'CONSENT-20260920-002', 1, 2, 'PENDING', 'Payment Initiation Service - E-Commerce Checkout', 'amazon-pay-tpp', NOW() + INTERVAL '1 days', NOW() - INTERVAL '1 days', NOW() - INTERVAL '1 days'),
-(3, 'CONSENT-20260922-003', 2, 3, 'REJECTED', 'Credit Scoring Analysis', 'quick-loan-tpp', NOW() + INTERVAL '30 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days')
+(1, 'CONSENT-20260915-001', 1, 1, 'AUTHORISED', 'Account Information Service - Aggregator App', 'READ_ACCOUNTS,READ_BALANCES,READ_TRANSACTIONS', 'fintech-aggregator-tpp', NOW() + INTERVAL '90 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+(2, 'CONSENT-20260920-002', 1, 2, 'PENDING', 'Payment Initiation Service - E-Commerce Checkout', 'READ_ACCOUNTS,READ_BALANCES', 'amazon-pay-tpp', NOW() + INTERVAL '30 days', NOW() - INTERVAL '1 days', NOW() - INTERVAL '1 days'),
+(3, 'CONSENT-20260922-003', 2, 3, 'REJECTED', 'Credit Scoring Analysis', 'READ_ACCOUNTS,READ_TRANSACTIONS', 'quick-loan-tpp', NOW() + INTERVAL '30 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO consent_audit_logs (id, consent_reference, customer_id, action, actor_role, actor_identifier, details, created_at)
+VALUES
+(1, 'CONSENT-20260915-001', 1, 'CONSENT_CREATED', 'TPP', 'fintech-aggregator-tpp', 'Requested scopes: READ_ACCOUNTS,READ_BALANCES,READ_TRANSACTIONS for purpose: Account Information Service - Aggregator App', NOW() - INTERVAL '5 days'),
+(2, 'CONSENT-20260915-001', 1, 'CONSENT_AUTHORISED', 'CUSTOMER', 'subash@banfico.com', 'Customer granted explicit consent for 90 days', NOW() - INTERVAL '5 days'),
+(3, 'CONSENT-20260920-002', 1, 'CONSENT_CREATED', 'TPP', 'amazon-pay-tpp', 'Requested scopes: READ_ACCOUNTS,READ_BALANCES for purpose: Payment Initiation Service - E-Commerce Checkout', NOW() - INTERVAL '1 days'),
+(4, 'CONSENT-20260922-003', 2, 'CONSENT_CREATED', 'TPP', 'quick-loan-tpp', 'Requested scopes: READ_ACCOUNTS,READ_TRANSACTIONS for purpose: Credit Scoring Analysis', NOW() - INTERVAL '2 days'),
+(5, 'CONSENT-20260922-003', 2, 'CONSENT_REJECTED', 'CUSTOMER', 'alice.j@example.com', 'Customer declined third party data access', NOW() - INTERVAL '2 days')
 ON CONFLICT (id) DO NOTHING;
 
 -- Reset sequence values to max IDs
@@ -128,3 +158,4 @@ SELECT setval('bank_accounts_id_seq', (SELECT COALESCE(MAX(id), 1) FROM bank_acc
 SELECT setval('transactions_id_seq', (SELECT COALESCE(MAX(id), 1) FROM transactions));
 SELECT setval('beneficiaries_id_seq', (SELECT COALESCE(MAX(id), 1) FROM beneficiaries));
 SELECT setval('consents_id_seq', (SELECT COALESCE(MAX(id), 1) FROM consents));
+SELECT setval('consent_audit_logs_id_seq', (SELECT COALESCE(MAX(id), 1) FROM consent_audit_logs));

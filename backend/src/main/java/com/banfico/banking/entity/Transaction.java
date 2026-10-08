@@ -48,6 +48,19 @@ public class Transaction {
     @Column(length = 255)
     private String description;
 
+    @Column(length = 10, nullable = false)
+    @Builder.Default
+    private String currency = "INR";
+
+    @Column(name = "initiated_by", length = 100)
+    private String initiatedBy;
+
+    @Column(name = "approved_by", length = 100)
+    private String approvedBy;
+
+    @Column(name = "rejection_reason", length = 255)
+    private String rejectionReason;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_account_id")
     private BankAccount sourceAccount;

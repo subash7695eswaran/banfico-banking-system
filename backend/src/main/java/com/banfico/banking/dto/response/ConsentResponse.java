@@ -22,8 +22,11 @@ public class ConsentResponse {
     private String accountNumber;
     private ConsentStatus status;
     private String purpose;
+    private String scopes;
     private String tppClientId;
     private LocalDateTime validUntil;
+    private LocalDateTime revokedAt;
+    private String revocationReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

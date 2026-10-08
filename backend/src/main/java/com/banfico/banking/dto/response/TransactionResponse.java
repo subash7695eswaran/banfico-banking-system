@@ -21,6 +21,10 @@ public class TransactionResponse {
     private BigDecimal amount;
     private TransactionStatus status;
     private String description;
+    private String currency;
+    private String initiatedBy;
+    private String approvedBy;
+    private String rejectionReason;
     private Long sourceAccountId;
     private String sourceAccountNumber;
     private Long destinationAccountId;

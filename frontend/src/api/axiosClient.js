@@ -8,13 +8,17 @@ const api = axios.create({
   }
 });
 
-// Interceptor to attach Keycloak JWT bearer token if available
+// Interceptor to attach Keycloak JWT bearer token and Persona context
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('banfico_jwt_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    const role = localStorage.getItem('banfico_current_role') || 'CUSTOMER';
+    const user = localStorage.getItem('banfico_current_user') || 'subash@banfico.com';
+    config.headers['X-Authenticated-Role'] = role;
+    config.headers['X-Authenticated-User'] = user;
     return config;
   },
   (error) => Promise.reject(error)
@@ -51,8 +55,11 @@ export const AccountApi = {
 
 export const TransactionApi = {
   getAll: () => api.get('/transactions'),
+  getPending: () => api.get('/transactions/pending'),
   getByAccount: (accountId) => api.get(`/accounts/${accountId}/transactions`),
-  execute: (accountId, data) => api.post(`/accounts/${accountId}/transactions`, data)
+  execute: (accountId, data) => api.post(`/accounts/${accountId}/transactions`, data),
+  approve: (id, checkerName) => api.post(`/transactions/${id}/approve?checkerName=${encodeURIComponent(checkerName || 'Checker')}`),
+  reject: (id, reason) => api.post(`/transactions/${id}/reject?reason=${encodeURIComponent(reason || 'Declined by Checker')}`)
 };
 
 export const BeneficiaryApi = {
@@ -65,11 +72,20 @@ export const BeneficiaryApi = {
 export const ConsentApi = {
   getAll: () => api.get('/consents'),
   getById: (id) => api.get(`/consents/${id}`),
+  getByReference: (ref) => api.get(`/consents/reference/${ref}`),
   getByCustomer: (customerId) => api.get(`/consents/customer/${customerId}`),
   create: (data) => api.post('/consents', data),
   approve: (id) => api.post(`/consents/${id}/approve`),
   reject: (id) => api.post(`/consents/${id}/reject`),
-  updateStatus: (id, status) => api.put(`/consents/${id}/status`, { status })
+  revoke: (id, data) => api.post(`/consents/${id}/revoke`, data),
+  updateStatus: (id, status) => api.put(`/consents/${id}/status`, { status }),
+  getAuditLogs: () => api.get('/consents/audit'),
+  getByReferenceAudit: (ref) => api.get(`/consents/${ref}/audit`)
+};
+
+export const OpenBankingApi = {
+  getData: (consentReference, resource = 'ALL') => 
+    api.get(`/open-banking/consents/${consentReference}/data?resource=${resource}`)
 };
 
 export default api;

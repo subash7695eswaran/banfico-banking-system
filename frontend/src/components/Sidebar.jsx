@@ -6,19 +6,31 @@ import {
   ArrowLeftRight, 
   UserCheck, 
   ShieldCheck, 
+  Layers,
+  FileText,
   Activity 
 } from 'lucide-react';
+import { ROLES } from './RoleSelector';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
-  const menuItems = [
+export default function Sidebar({ activeTab, setActiveTab, currentRole }) {
+  const roleObj = ROLES[currentRole] || ROLES.ADMIN;
+  const allowedTabs = roleObj.allowedTabs || [];
+
+  const allMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'accounts', label: 'Bank Accounts', icon: CreditCard },
     { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
     { id: 'beneficiaries', label: 'Beneficiaries', icon: UserCheck },
-    { id: 'consents', label: 'Open Banking Consents', icon: ShieldCheck, badge: 'Key' },
+    { id: 'consents', label: 'Open Banking Consents', icon: ShieldCheck, badge: 'Core' },
+    { id: 'tpp-console', label: 'Data Consumer (TPP)', icon: Layers, badge: 'TPP' },
+    { id: 'audit', label: 'Audit & Governance', icon: FileText, badge: 'RBAC' },
     { id: 'system', label: 'System Health & Info', icon: Activity },
   ];
+
+  const visibleMenuItems = currentRole === 'ADMIN' 
+    ? allMenuItems 
+    : allMenuItems.filter(item => allowedTabs.includes(item.id));
 
   return (
     <aside className="sidebar">
@@ -31,7 +43,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       </div>
 
       <nav className="nav-list">
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (

@@ -118,7 +118,7 @@ export default function Beneficiaries() {
                     <td>{b.bankName}</td>
                     <td>{b.customerName || `Customer #${b.customerId}`}</td>
                     <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(b.createdAt).toLocaleDateString('en-GB')}
+                      {new Date(b.createdAt).toLocaleDateString('en-IN')}
                     </td>
                     <td>
                       <button 

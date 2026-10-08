@@ -17,4 +17,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByAccountId(@Param("accountId") Long accountId);
 
     List<Transaction> findAllByOrderByCreatedAtDesc();
+    List<Transaction> findByStatusOrderByCreatedAtDesc(com.banfico.banking.entity.enums.TransactionStatus status);
 }

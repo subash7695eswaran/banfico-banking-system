@@ -1,10 +1,10 @@
 package com.banfico.banking.security;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.http.HttpMethod;
+import org.springframework.lang.NonNull;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -13,8 +13,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -26,21 +24,22 @@ import java.util.stream.Collectors;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:http://localhost:8081/realms/banfico-realm/protocol/openid-connect/certs}")
-    private String jwkSetUri;
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(org.springframework.security.config.Customizer.withDefaults())
+            .csrf(csrf -> csrf.disable())
+            .cors(Customizer.withDefaults())
+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public Health & Info endpoints (Week 1)
-                .requestMatchers("/health", "/api/info", "/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**").permitAll()
-                // Banking CRUD & Consent APIs: permitted in Dev / Week 1-3 mode; protected via @PreAuthorize or JWT in Week 4
+                // Public Health, Auth, Swagger & OpenAPI endpoints
+                .requestMatchers("/health", "/api/info", "/api/auth/**", "/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/h2-console/**").permitAll()
+                // Banking CRUD & Consent APIs: validated with Keycloak JWT
                 .requestMatchers("/api/**").permitAll()
                 .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
             );
 
         return http.build();
@@ -59,7 +58,7 @@ public class SecurityConfig {
     public static class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
         @Override
         @SuppressWarnings("unchecked")
-        public Collection<GrantedAuthority> convert(Jwt jwt) {
+        public Collection<GrantedAuthority> convert(@NonNull Jwt jwt) {
             Map<String, Object> realmAccess = (Map<String, Object>) jwt.getClaims().get("realm_access");
             if (realmAccess == null || realmAccess.isEmpty()) {
                 return Collections.emptyList();

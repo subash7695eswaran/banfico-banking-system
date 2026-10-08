@@ -9,5 +9,8 @@ public interface TransactionService {
     TransactionResponse createTransaction(Long accountId, CreateTransactionRequest request);
     List<TransactionResponse> getTransactionsByAccountId(Long accountId);
     List<TransactionResponse> getAllTransactions();
+    List<TransactionResponse> getPendingTransactions();
     TransactionResponse getTransactionByReference(String reference);
+    TransactionResponse approveTransaction(Long id, String checkerName);
+    TransactionResponse rejectTransaction(Long id, String reason);
 }

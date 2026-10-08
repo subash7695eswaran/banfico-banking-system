@@ -27,7 +27,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   security:
     oauth2:
@@ -53,9 +52,17 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+# Banking Business Rules & Maker-Checker Settings
+banking:
+  currency: INR
+  symbol: "₹"
+  maker-checker:
+    approval-threshold-inr: 50000.00
+
 # App Metadata
 app:
   version: 1.0.0
   name: Banfico Mini Banking System
   description: Open Banking Consent Management & Core Banking Platform
   program: Banfico University Full-Stack Training
+

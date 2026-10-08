@@ -3,8 +3,6 @@ package com.banfico.banking.controller;
 import com.banfico.banking.dto.response.ApiResponse;
 import com.banfico.banking.dto.response.HealthResponse;
 import com.banfico.banking.dto.response.InfoResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -22,7 +20,6 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@Tag(name = "Health & System Info", description = "Week 1 baseline healthcheck and metadata APIs")
 public class HealthController {
 
     private final DataSource dataSource;
@@ -41,7 +38,6 @@ public class HealthController {
     private String programName;
 
     @GetMapping("/health")
-    @Operation(summary = "System Health Check", description = "Validates application status and PostgreSQL database connection.")
     public ResponseEntity<HealthResponse> getHealth() {
         String dbStatus = "UNKNOWN";
         Map<String, Object> details = new LinkedHashMap<>();
@@ -71,7 +67,6 @@ public class HealthController {
     }
 
     @GetMapping("/api/info")
-    @Operation(summary = "Application Information", description = "Provides technical details about the service, Java version, and available APIs.")
     public ResponseEntity<ApiResponse<InfoResponse>> getInfo() {
         Map<String, String> keyEndpoints = new LinkedHashMap<>();
         keyEndpoints.put("Health", "GET /health");
@@ -81,7 +76,6 @@ public class HealthController {
         keyEndpoints.put("Transactions", "POST /api/accounts/{id}/transactions, GET /api/accounts/{id}/transactions");
         keyEndpoints.put("Beneficiaries", "GET /api/beneficiaries, POST /api/beneficiaries, DELETE /api/beneficiaries/{id}");
         keyEndpoints.put("Consents", "POST /api/consents, GET /api/consents, POST /api/consents/{id}/approve, POST /api/consents/{id}/reject");
-        keyEndpoints.put("Swagger Docs", "GET /swagger-ui.html");
 
         List<String> modules = List.of(
                 "Week 1: Setup & Health Check APIs",

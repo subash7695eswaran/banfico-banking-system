@@ -27,6 +27,8 @@ public class CreateConsentRequest {
     @NotBlank(message = "Third Party Provider (TPP) client ID is required")
     private String tppClientId;
 
+    private String scopes;
+
     @Future(message = "Consent validity date must be in the future")
     private LocalDateTime validUntil;
 }

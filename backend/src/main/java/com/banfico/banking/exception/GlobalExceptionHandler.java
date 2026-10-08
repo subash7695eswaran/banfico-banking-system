@@ -67,6 +67,19 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler({ConsentAccessDeniedException.class, org.springframework.security.access.AccessDeniedException.class})
+    public ResponseEntity<ErrorDetails> handleAccessDeniedException(
+            Exception ex, HttpServletRequest request) {
+        ErrorDetails error = ErrorDetails.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error("Forbidden")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorDetails> handleValidationException(
             MethodArgumentNotValidException ex, HttpServletRequest request) {

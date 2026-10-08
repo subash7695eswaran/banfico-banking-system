@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeftRight, Plus, ArrowUp, ArrowDown, Repeat } from 'lucide-react';
+import { ArrowLeftRight, Plus, ArrowUp, ArrowDown, Repeat, CheckCheck, XCircle, CheckCircle, ShieldAlert } from 'lucide-react';
 import { TransactionApi, AccountApi } from '../api/axiosClient';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 
-export default function Transactions() {
+export default function Transactions({ currentRole }) {
   const [transactions, setTransactions] = useState([]);
+  const [pendingTransactions, setPendingTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,11 +27,13 @@ export default function Transactions() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [txRes, accRes] = await Promise.all([
+      const [txRes, pendingRes, accRes] = await Promise.all([
         TransactionApi.getAll(),
+        TransactionApi.getPending().catch(() => ({ data: [] })),
         AccountApi.getAll()
       ]);
       setTransactions(txRes.data || []);
+      setPendingTransactions(pendingRes.data || []);
       setAccounts(accRes.data || []);
       if (accRes.data?.length > 0 && !formData.accountId) {
         setFormData(prev => ({
@@ -50,18 +53,47 @@ export default function Transactions() {
     e.preventDefault();
     try {
       setError(null);
-      await TransactionApi.execute(Number(formData.accountId), {
+      const res = await TransactionApi.execute(Number(formData.accountId), {
         transactionType: formData.transactionType,
         amount: Number(formData.amount),
         destinationAccountId: formData.transactionType === 'TRANSFER' ? Number(formData.destinationAccountId) : null,
         description: formData.description
       });
-      setSuccessMsg('Transaction executed successfully!');
+      const tx = res.data || res;
+      if (tx.status === 'PENDING_APPROVAL') {
+        setSuccessMsg(`High-value transaction (${tx.transactionReference}) submitted! Awaiting Checker dual-authorization.`);
+      } else {
+        setSuccessMsg('Transaction executed and settled immediately!');
+      }
       setIsModalOpen(false);
+      loadData();
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } catch (err) {
+      setError(err.message || 'Transaction failed');
+    }
+  };
+
+  const handleApprovePending = async (id) => {
+    try {
+      setError(null);
+      await TransactionApi.approve(id, 'Chris (Checker)');
+      setSuccessMsg('Transaction APPROVED and ledger balances updated!');
       loadData();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
-      setError(err.message || 'Transaction failed');
+      setError(err.message || 'Failed to approve transaction');
+    }
+  };
+
+  const handleRejectPending = async (id) => {
+    try {
+      setError(null);
+      await TransactionApi.reject(id, 'Declined by Checker');
+      setSuccessMsg('Transaction REJECTED.');
+      loadData();
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err) {
+      setError(err.message || 'Failed to reject transaction');
     }
   };
 
@@ -69,8 +101,10 @@ export default function Transactions() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Transaction History & Operations</h1>
-          <p className="page-description">Execute deposits, withdrawals, transfers and review full ledger audit trail.</p>
+          <h1 className="page-title">Transaction Operations & Ledger</h1>
+          <p className="page-description">
+            Execute deposits, withdrawals, transfers with Maker-Checker dual authorization for high-value operations (&ge; ₹50,000).
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
           <ArrowLeftRight size={16} /> Execute Transaction
@@ -80,14 +114,81 @@ export default function Transactions() {
       {successMsg && <div className="alert-banner alert-success">{successMsg}</div>}
       {error && <div className="alert-banner alert-error">{error}</div>}
 
+      {/* Maker-Checker Workflow Banner */}
+      {pendingTransactions.length > 0 && (
+        <div className="glass-panel" style={{ padding: '20px', marginBottom: '28px', background: 'rgba(245, 158, 11, 0.08)', borderColor: 'rgba(245, 158, 11, 0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ShieldAlert size={22} style={{ color: '#fbbf24' }} />
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff' }}>
+                Checker Review Queue: {pendingTransactions.length} Pending Dual-Authorization
+              </h2>
+            </div>
+            <span style={{ fontSize: '0.75rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '3px 8px', borderRadius: '4px', fontWeight: 700 }}>
+              Maker-Checker Control
+            </span>
+          </div>
+
+          <div className="table-container">
+            <table className="data-table" style={{ background: 'rgba(0,0,0,0.25)' }}>
+              <thead>
+                <tr>
+                  <th>Tx Reference</th>
+                  <th>Type</th>
+                  <th>Amount (₹)</th>
+                  <th>Source Account</th>
+                  <th>Destination Account</th>
+                  <th>Description</th>
+                  <th>Checker Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingTransactions.map((tx) => (
+                  <tr key={tx.id}>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.8rem', color: 'var(--accent-cyan)' }}>
+                      {tx.transactionReference}
+                    </td>
+                    <td style={{ fontWeight: 700 }}>{tx.transactionType}</td>
+                    <td style={{ fontWeight: 800, color: '#ffffff' }}>₹{Number(tx.amount).toFixed(2)}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{tx.sourceAccountNumber}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{tx.destinationAccountNumber || '—'}</td>
+                    <td style={{ fontSize: '0.8rem' }}>{tx.description}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => handleApprovePending(tx.id)}
+                          className="btn btn-success btn-sm"
+                          title="Authorize operation"
+                        >
+                          <CheckCircle size={14} /> Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectPending(tx.id)}
+                          className="btn btn-danger btn-sm"
+                          title="Decline operation"
+                        >
+                          <XCircle size={14} /> Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Main Historical Ledger Table */}
       <div className="glass-panel" style={{ padding: '24px' }}>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '16px' }}>Full Transaction Audit Ledger</h2>
         <div className="table-container">
           <table className="data-table">
             <thead>
               <tr>
                 <th>Reference</th>
                 <th>Type</th>
-                <th>Amount (£)</th>
+                <th>Amount (₹)</th>
                 <th>Source Account</th>
                 <th>Destination Account</th>
                 <th>Description</th>
@@ -123,7 +224,7 @@ export default function Transactions() {
                       </span>
                     </td>
                     <td style={{ fontWeight: 800, fontSize: '0.95rem' }}>
-                      £{Number(tx.amount).toFixed(2)}
+                      ₹{Number(tx.amount).toFixed(2)}
                     </td>
                     <td style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       {tx.sourceAccountNumber || '—'}
@@ -134,7 +235,7 @@ export default function Transactions() {
                     <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
                     <td><StatusBadge status={tx.status} /></td>
                     <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(tx.createdAt).toLocaleString('en-GB')}
+                      {new Date(tx.createdAt).toLocaleString('en-IN')}
                     </td>
                   </tr>
                 ))
@@ -144,8 +245,8 @@ export default function Transactions() {
         </div>
       </div>
 
-      {/* Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Execute Banking Transaction">
+      {/* Modal for Executing Transaction */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Execute Banking Transaction (Maker)">
         <form onSubmit={handleExecuteTransaction}>
           <div className="form-group">
             <label className="form-label">Transaction Type</label>
@@ -172,7 +273,7 @@ export default function Transactions() {
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.accountNumber} - {a.customerName} (Bal: £{Number(a.balance).toFixed(2)})
+                  {a.accountNumber} - {a.customerName} (Bal: ₹{Number(a.balance).toFixed(2)})
                 </option>
               ))}
             </select>
@@ -197,17 +298,22 @@ export default function Transactions() {
           )}
 
           <div className="form-group">
-            <label className="form-label">Amount (£)</label>
+            <label className="form-label">Amount (₹)</label>
             <input 
               type="number" 
               step="0.01" 
               min="0.01" 
               className="form-control" 
-              placeholder="100.00" 
+              placeholder="5000.00" 
               required
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
             />
+            {Number(formData.amount) >= 50000 && (
+              <div style={{ fontSize: '0.75rem', color: '#fbbf24', marginTop: '4px' }}>
+                Note: Amounts &ge; ₹50,000 require dual-authorization by a Banking Checker.
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -226,7 +332,7 @@ export default function Transactions() {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Execute Transaction
+              Initiate Operation
             </button>
           </div>
         </form>
